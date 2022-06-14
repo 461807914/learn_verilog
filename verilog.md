@@ -94,9 +94,14 @@ endmodule
 ```
 
 testbench如下：
-下面的测试代码使用`异名例化`的方法进行`例化`
+下面的测试代码使用`匿名例化`的方法进行`例化`
 所谓`例化`,可以理解成在某个模块中调用另外一个模块,类似c语言中调用一个封装好的函数
 只需要调用该函数，而不需要知道函数的实现。
+关于`例化`简单参考知乎上,有两种例化：
+1) 按位置例化
+2) 按名称例化
+[两个例化的解释](https://zhuanlan.zhihu.com/p/393887891)
+[什么是例化](https://blog.csdn.net/weixin_42470069/article/details/107421790)
 
 ```verilog
 module nand_gate_tb; // 类似C语言里的define?(视频里面没说)
@@ -146,6 +151,7 @@ initial begin
     #10     aa <= 4'b0111; bb <= 4'b0100;
     #10     aa <= 4'b0000; bb <= 4'b1110;
     #10     $stop
+endmodule
 ```
 
 电路图如下：
@@ -163,3 +169,66 @@ initial begin
 
 前面画好的8位反相器和4位与非门以及其简单画法如下：
 ![simple](1_inv_nand_simple.png)
+
+
+# 第二讲 组合逻辑代码设计和仿真
+
+## 2.1 二选一逻辑
+
+如下为功能选择模块的图，模块名为fn_sw，功能为：
+当sel为0时，y是a和b的与；当sel为1时y时a和b的或。
+
+![sel](2_sel.png)
+
+对应的代码为：
+```verilog
+module fn_sw(a, b, sel, y);
+    input a;
+    input b;
+    input sel;
+    output y;
+    assign y = sel ? (a^b):(a&b); // 这里使用问号冒号语句，类似c语言
+endmodule
+```
+
+也可以使用always语句块实现二选一逻辑
+```verilog
+module fn_sw(a, b, sel, y);
+    reg y;  // always 语句块中的赋值变量必须是reg型
+    always@(a or b or sel) // @后面的a b sel为敏感变量，表示组合逻辑的输入，有几个输入就写几个，都用or链接
+    begin
+        if (sel == 1) begin // if else 语句
+            y<=a^b;
+        end
+    else begin
+        y <= a & b;
+        end
+    end
+```
+
+测试代码如下：
+```verilog
+`timescale 1ns/10ps
+reg  a, b, sel;
+wire y;
+module fn_sw_tb;;
+fn_sw fn_sw(.a(a), .b(b), .sel(sel), .y(y));
+    initial begin
+                a <= 0; b <= 0; sel <= 0; // 在0ns时设置a, b, sel的值
+        #10     a <= 0; b <= 0; sel <= 1; // 10ns时变化
+        #10     a <= 0; b <= 1; sel <= 0;
+        #10     a <= 0; b <= 1; sel <= 1;
+        #10     a <= 1; b <= 0; sel <= 0;
+        #10     a <= 1; b <= 0; sel <= 1;
+        #10     a <= 1; b <= 1; sel <= 0;
+        #10     a <= 1; b <= 1; sel <= 1;
+        #10     $stop
+    end
+
+
+endmodule
+```
+如下图为：a为0，b为0，sel为1时的波形
+![wave2](2_wave.png)
+
+记录13:37
